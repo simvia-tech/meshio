@@ -401,7 +401,7 @@ def write(filename, mesh, med_version="4.1.0", **kwargs):
                 supp = "ELNO"
             else:
                 supp = "ELGA"
-            field_name = field_names[name_idx] if field_names else None
+            field_name = field_names[name_idx] if field_names and name_idx < len(field_names) else None
             _write_data(
                 fields,
                 mesh_name,
