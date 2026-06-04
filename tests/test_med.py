@@ -647,13 +647,24 @@ def test_parse_med_field_name_single():
     assert pdt is None
 
 
-def test_parse_med_field_name_multi():
+def test_parse_med_field_name_single():
     """
-    _parse_med_field_name doit décomposer 'Temperature[2] - 1.5'
-    en ('Temperature', 2, 1.5).
+    _parse_med_field_name on a name without a pattern
+    should return (name, None, None).
     """
     from meshio.med._med import _parse_med_field_name
+    base, idx, pdt = _parse_med_field_name("Temperature")
+    assert base == "Temperature"
+    assert idx is None
+    assert pdt is None
 
+
+def test_parse_med_field_name_multi():
+    """
+    _parse_med_field_name should decompose 'Temperature[2] - 1.5'
+    into ('Temperature', 2, 1.5).
+    """
+    from meshio.med._med import _parse_med_field_name
     base, idx, pdt = _parse_med_field_name("Temperature[2] - 1.5")
     assert base == "Temperature"
     assert idx == 2
@@ -662,12 +673,11 @@ def test_parse_med_field_name_multi():
 
 def test_multi_timestep_grouped_under_single_hdf5_field(tmp_path):
     """
-    Plusieurs timesteps d'un même champ doivent être écrits
-    sous un seul groupe HDF5 dans CHA, pas comme des champs séparés.
-    Sans PR16, chaque 'Temperature[i] - t' créait un groupe séparé.
+    Multiple timesteps of the same field should be written
+    under a single HDF5 group in CHA, not as separate fields.
+    Without PR16, each 'Temperature[i] - t' created a separate group.
     """
     from meshio._mesh import Mesh, CellBlock
-
     points = np.array([
         [0.0, 0.0, 0.0], [1.0, 0.0, 0.0],
         [0.0, 1.0, 0.0], [1.0, 1.0, 0.0],
@@ -682,66 +692,60 @@ def test_multi_timestep_grouped_under_single_hdf5_field(tmp_path):
     )
     filename = tmp_path / "multi_ts.med"
     meshio.med.write(filename, mesh)
-
     with h5py.File(filename, "r") as f:
-        assert "CHA" in f, "Le groupe CHA doit exister"
+        assert "CHA" in f, "The CHA group must exist"
         cha_keys = list(f["CHA"].keys())
-
         assert "Temperature" in cha_keys, (
-            "Les timesteps doivent être regroupés sous 'Temperature'"
+            "Timesteps must be grouped under 'Temperature'"
         )
         assert "Temperature[0] - 0.0" not in cha_keys, (
-            "Le nom avec [0] ne doit pas être un champ séparé"
+            "The name with [0] must not be a separate field"
         )
         assert "Temperature[1] - 1.0" not in cha_keys, (
-            "Le nom avec [1] ne doit pas être un champ séparé"
+            "The name with [1] must not be a separate field"
         )
         assert len(f["CHA"]["Temperature"].keys()) == 2, (
-            "Il doit y avoir exactement 2 sous-groupes de timestep"
+            "There must be exactly 2 timestep subgroups"
         )
 
 
 def test_no_cha_group_when_no_fields(tmp_path):
     """
-    Sans champs, le groupe CHA ne doit pas être créé.
-    Sans PR16, CHA était toujours créé même vide.
+    Without fields, the CHA group must not be created.
+    Without PR16, CHA was always created even when empty.
     """
     mesh = helpers.tri_mesh
     filename = tmp_path / "no_fields.med"
     meshio.med.write(filename, mesh)
-
     with h5py.File(filename, "r") as f:
         assert "CHA" not in f, (
-            "Le groupe CHA ne doit pas exister quand il n'y a pas de champs"
+            "The CHA group must not exist when there are no fields"
         )
 
 
 def test_multi_timestep_roundtrip_box(tmp_path):
     """
-    Un fichier MED avec plusieurs timesteps doit survivre
-    à un cycle read→write avec les bonnes valeurs.
-    On utilise box.med qui contient déjà des champs.
+    A MED file with multiple timesteps must survive
+    a read→write cycle with the correct values.
+    We use box.med which already contains fields.
     """
     this_dir = pathlib.Path(__file__).resolve().parent
     filename = this_dir / "meshes" / "med" / "box.med"
     filename_out = tmp_path / "box_roundtrip.med"
-
     mesh_out = meshio.med.read(filename)
     meshio.med.write(filename_out, mesh_out)
-
     mesh_rt = meshio.med.read(filename_out)
-
     for key in mesh_out.point_data:
         if key == "point_tags":
             continue
         assert key in mesh_rt.point_data, (
-            f"Le champ nodal '{key}' doit être présent après round-trip"
+            f"The nodal field '{key}' must be present after round-trip"
         )
         assert np.allclose(
             mesh_out.point_data[key],
             mesh_rt.point_data[key],
             equal_nan=True,
-        ), f"Les valeurs du champ '{key}' doivent être identiques après round-trip"
+        ), f"The values of field '{key}' must be identical after round-trip"
 
 
 def test_family_group_names_round_trip(tmp_path):
@@ -750,7 +754,6 @@ def test_family_group_names_round_trip(tmp_path):
     mesh = helpers.tri_mesh
     mesh.point_tags = {-1: ["alpha", "beta"], -2: ["gamma"]}
     meshio.med.write(filename, mesh)
-
     mesh_out = meshio.med.read(filename)
     assert mesh_out.point_tags == {-1: ["alpha", "beta"], -2: ["gamma"]}
 
@@ -761,7 +764,6 @@ def test_family_with_no_groups_omits_GRO(tmp_path):
     mesh = helpers.tri_mesh
     mesh.point_tags = {-42: []}
     meshio.med.write(filename, mesh)
-
     with h5py.File(filename, "r") as f:
         family = f["FAS/mesh/NOEUD/FAM_-42_"]
         assert "GRO" not in family
