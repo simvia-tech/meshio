@@ -742,3 +742,27 @@ def test_multi_timestep_roundtrip_box(tmp_path):
             mesh_rt.point_data[key],
             equal_nan=True,
         ), f"Les valeurs du champ '{key}' doivent être identiques après round-trip"
+
+
+def test_family_group_names_round_trip(tmp_path):
+    """Family group names must survive a write/read round-trip."""
+    filename = tmp_path / "fam_round_trip.med"
+    mesh = helpers.tri_mesh
+    mesh.point_tags = {-1: ["alpha", "beta"], -2: ["gamma"]}
+    meshio.med.write(filename, mesh)
+
+    mesh_out = meshio.med.read(filename)
+    assert mesh_out.point_tags == {-1: ["alpha", "beta"], -2: ["gamma"]}
+
+
+def test_family_with_no_groups_omits_GRO(tmp_path):
+    """A family with an empty group list must NOT create a GRO subgroup."""
+    filename = tmp_path / "fam_empty.med"
+    mesh = helpers.tri_mesh
+    mesh.point_tags = {-42: []}
+    meshio.med.write(filename, mesh)
+
+    with h5py.File(filename, "r") as f:
+        family = f["FAS/mesh/NOEUD/FAM_-42_"]
+        assert "GRO" not in family
+        assert int(family.attrs["NUM"]) == -42
