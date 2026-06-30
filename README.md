@@ -1,4 +1,4 @@
-> ## ⚠️ This repository is no longer maintained
+> ## ⚠️ This repository has moved
 >
 > **All development has moved to [simvia-tech/meshlane](https://github.com/simvia-tech/meshlane)** — a mesh conversion library and actively maintained descendant of meshio.
 >
