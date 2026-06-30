@@ -1,3 +1,16 @@
+> ## ⚠️ This repository is no longer maintained
+>
+> **All development has moved to [simvia-tech/meshlane](https://github.com/simvia-tech/meshlane)** — a mesh conversion library and actively maintained descendant of meshio.
+>
+> Please open all **issues**, **pull requests**, and **discussions** there.
+>
+> This repository is kept as a read-only archive.
+
+<br><br><br>
+<br><br><br>
+<br><br><br>
+<br><br><br>
+
 <p align="center">
   <a href="https://github.com/nschloe/meshio"><img alt="meshio" src="https://nschloe.github.io/meshio/logo-with-text.svg" width="60%"></a>
   <p align="center">I/O for mesh files.</p>
